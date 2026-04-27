@@ -224,3 +224,8 @@ convention = "numpy"
 
 [tool.ruff.format]
 docstring-code-format = true
+
+[tool.uv.workspace]
+members = [
+    "manimations",
+]

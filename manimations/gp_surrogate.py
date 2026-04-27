@@ -27,7 +27,7 @@ class GPSurrogateScene(ThreeDScene):
             x_length=6,
             y_length=6,
             z_length=3,
-            axis_config={"color": BLACK, "stroke_width": 2},
+            axis_config={"color": BLACK, "stroke_width": 2, "include_ticks": False},
         )
 
         x1_label = MathTex("x_1", color=BLACK, font_size=32)
@@ -37,8 +37,8 @@ class GPSurrogateScene(ThreeDScene):
         self.add_fixed_orientation_mobjects(x1_label, x2_label)
         self.remove(x1_label, x2_label)
 
-        input_space_label = Text(
-            "Input Space", font=TEXT_FONT, font_size=22, color=BLACK,
+        input_space_label = MathTex(
+            r"\mathrm{Input\;Space}", font_size=36, color=BLACK,
         ).to_edge(DOWN, buff=0.4)
         self.add_fixed_in_frame_mobjects(input_space_label)
         self.remove(input_space_label)
@@ -132,8 +132,8 @@ class GPSurrogateScene(ThreeDScene):
             stroke_width=2,
             tip_length=0.2,
         )
-        perf_label = Text(
-            "Performance Gap", font=TEXT_FONT, font_size=18, color=BLACK,
+        perf_label = MathTex(
+            r"\mathrm{Heuristic}", font_size=32, color=BLACK,
         ).rotate(PI / 2)
         perf_label.move_to(axes.c2p(-4.1, 0, 1.1))
         self.add_fixed_orientation_mobjects(perf_label)
@@ -170,9 +170,9 @@ class GPSurrogateScene(ThreeDScene):
             run_time=1.2,
         )
 
-        feed_label = Text(
-            "Fit Gaussian Process",
-            font=TEXT_FONT, font_size=24, color=BLACK,
+        feed_label = MathTex(
+            r"\mathrm{Fit\;Gaussian\;Process}",
+            font_size=36, color=BLACK,
         ).to_edge(UP, buff=0.4)
         self.add_fixed_in_frame_mobjects(feed_label)
         self.remove(feed_label)
