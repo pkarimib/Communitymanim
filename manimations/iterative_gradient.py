@@ -45,8 +45,8 @@ BLACK_ACCENT = "#444444"
 TEXT_FONT = "Arial"
 
 # New constants for this video (harmonize with the deck)
-Opt_BLUE = "#1F77B4"
-HEURISTIC_GREEN = "#2CA02C"
+OPT_GREEN = "#2CA02C"      # Opt is now green
+HEURISTIC_BLUE = "#1F77B4"  # Heuristic is now blue
 GAP_ORANGE = "#F39C12"
 POINT_RED = "#D62728"
 
@@ -104,8 +104,8 @@ class IterativeGradientAscentScene(ThreeDScene):
             font_size=32,
         ).to_edge(UP, buff=0.4)
         eq_strip[0].set_color(GAP_ORANGE)
-        eq_strip[2].set_color(Opt_BLUE)
-        eq_strip[4].set_color(HEURISTIC_GREEN)
+        eq_strip[2].set_color(OPT_GREEN)
+        eq_strip[4].set_color(HEURISTIC_BLUE)
 
         self.add_fixed_in_frame_mobjects(eq_strip)
         self.remove(eq_strip)
@@ -277,15 +277,15 @@ class IterativeGradientAscentScene(ThreeDScene):
                 max_tip_length_to_length_ratio=0.2,
             )
 
-        blue_arrow = make_arrow(spec0["I"], spec0["blue"], Opt_BLUE)
-        green_arrow = make_arrow(spec0["I"], spec0["green"], HEURISTIC_GREEN)
+        blue_arrow = make_arrow(spec0["I"], spec0["blue"], OPT_GREEN)
+        green_arrow = make_arrow(spec0["I"], spec0["green"], HEURISTIC_BLUE)
         blue_label = MathTex(
             r"\nabla \mathrm{Opt}",
-            color=Opt_BLUE, font_size=26,
+            color=OPT_GREEN, font_size=26,
         ).next_to(blue_arrow.get_end(), UR, buff=0.06)
         green_label = MathTex(
             r"\nabla \mathrm{Heuristic} \approx \nabla H_G",
-            color=HEURISTIC_GREEN, font_size=24,
+            color=HEURISTIC_BLUE, font_size=24,
         ).next_to(green_arrow.get_end(), DR, buff=0.06)
 
         self.add_fixed_in_frame_mobjects(
@@ -304,7 +304,7 @@ class IterativeGradientAscentScene(ThreeDScene):
                                     z_at_I + 0.45)
         surf_grad_arrow = Arrow3D(
             start=surf_grad_base, end=surf_grad_tip,
-            color=HEURISTIC_GREEN,
+            color=HEURISTIC_BLUE,
             thickness=0.025, height=0.16, base_radius=0.06,
         )
 
@@ -393,45 +393,100 @@ class IterativeGradientAscentScene(ThreeDScene):
         # ==================================================================
         # Step 6 (27-35s): second iteration at I_1
         # ==================================================================
-        # GP surface was cleared in step 4 -- iterations 2 and 3 are pure
-        # input-space animations.
+        # Re-fit the GP locally around I_1: same gp_func, but the surface
+        # patch is now centered on I_1's box (matches the new sample set).
+        I_1_data = spec1["I"]
+        gp_u_min_1, gp_u_max_1 = I_1_data[0] - half_d, I_1_data[0] + half_d
+        gp_v_min_1, gp_v_max_1 = I_1_data[1] - half_d, I_1_data[1] + half_d
+        gp_surface_1 = Surface(
+            lambda u, v: gp_axes.c2p(u, v, gp_func(u, v) + z_offset),
+            u_range=[gp_u_min_1, gp_u_max_1],
+            v_range=[gp_v_min_1, gp_v_max_1],
+            resolution=(24, 24),
+            fill_opacity=0.85,
+            stroke_width=0.4,
+            stroke_color=WHITE,
+        )
+        gp_surface_1.set_fill_by_value(
+            axes=gp_axes,
+            colorscale=[BLUE, TEAL, GREEN, YELLOW, ORANGE, RED],
+            axis=2,
+        )
 
-        blue_arrow1 = make_arrow(spec1["I"], spec1["blue"], Opt_BLUE)
-        green_arrow1 = make_arrow(spec1["I"], spec1["green"], HEURISTIC_GREEN)
+        gp_caption_1 = MathTex(
+            r"\mathrm{GP\;Fit\;to\;Local\;Samples}",
+            font_size=36, color=BLACK_ACCENT,
+        ).move_to([-3.7, 2.5, 0])
+        self.add_fixed_in_frame_mobjects(gp_caption_1)
+        self.remove(gp_caption_1)
+
+        # Bring the LEFT-side GP visuals back (axes + labels were cleared
+        # in Step 4) for the I_1 neighborhood.
+        self.play(
+            FadeIn(gp_axes.x_axis),
+            FadeIn(gp_axes.y_axis),
+            FadeIn(gp_axes.z_axis),
+            FadeIn(gp_x1_label),
+            FadeIn(gp_x2_label),
+            FadeIn(gap_label),
+            FadeIn(gp_surface_1),
+            FadeIn(gp_caption_1),
+            run_time=1.2,
+        )
+        self.wait(0.4)
+        self.play(FadeOut(gp_caption_1), run_time=0.4)
+
+        blue_arrow1 = make_arrow(spec1["I"], spec1["blue"], OPT_GREEN)
+        green_arrow1 = make_arrow(spec1["I"], spec1["green"], HEURISTIC_BLUE)
         orange_arrow1 = make_arrow(spec1["I"], spec1["orange"], GAP_ORANGE)
         self.add_fixed_in_frame_mobjects(blue_arrow1, green_arrow1, orange_arrow1)
         self.remove(blue_arrow1, green_arrow1, orange_arrow1)
 
+        # Surface gradient arrow on the GP for I_1 (mirrors what we did for
+        # I_0 in Step 3 -- the surface gradient becomes the green arrow on
+        # the right grid).
+        gx1, gy1 = (max(min(I_1_data[0], 3), -3),
+                    max(min(I_1_data[1], 3), -3))
+        dfdx1, dfdy1 = gp_grad(gx1, gy1)
+        gmag1 = np.hypot(dfdx1, dfdy1) or 1.0
+        dx1_n, dy1_n = dfdx1 / gmag1, dfdy1 / gmag1
+        z_at_I1 = gp_func(gx1, gy1) + z_offset
+        surf_grad_base_1 = gp_axes.c2p(gx1, gy1, z_at_I1 + 0.05)
+        surf_grad_tip_1 = gp_axes.c2p(
+            gx1 + 0.7 * dx1_n, gy1 + 0.7 * dy1_n, z_at_I1 + 0.45,
+        )
+        surf_grad_arrow_1 = Arrow3D(
+            start=surf_grad_base_1, end=surf_grad_tip_1,
+            color=HEURISTIC_BLUE,
+            thickness=0.025, height=0.16, base_radius=0.06,
+        )
+
         self.play(
             GrowArrow(blue_arrow1),
             GrowArrow(green_arrow1),
+            FadeIn(surf_grad_arrow_1, shift=0.1 * OUT),
             run_time=1.0,
         )
         self.wait(0.4)
         self.play(
             FadeOut(blue_arrow1), FadeOut(green_arrow1),
+            FadeOut(surf_grad_arrow_1),
             GrowArrow(orange_arrow1),
             run_time=0.8,
         )
         self.wait(0.4)
 
-        # Step I_1 -> I_2
+        # Step I_1 -> I_2: clear the I_1 GP visuals and old samples; no new
+        # samples are scattered around I_2 -- the trajectory is enough.
         spec2 = iter_specs[2]
         new_I_pos2 = plane.c2p(*spec2["I"])
         delta_screen2 = new_I_pos2 - plane.c2p(*spec1["I"])
 
-        offsets2 = rng.uniform(-half_d * 0.85, half_d * 0.85,
-                               size=(n_samples, 2))
-        new_sample_dots2 = [
-            Dot(plane.c2p(spec2["I"][0] + dx, spec2["I"][1] + dy),
-                color=SAMPLE_GRAY, radius=0.05)
-            for dx, dy in offsets2
-        ]
         I_label_2 = MathTex("I_2", color=I_COLOR, font_size=34).move_to(
             new_I_pos2 + UL * 0.22,
         )
-        self.add_fixed_in_frame_mobjects(*new_sample_dots2, I_label_2)
-        self.remove(*new_sample_dots2, I_label_2)
+        self.add_fixed_in_frame_mobjects(I_label_2)
+        self.remove(I_label_2)
 
         self.play(
             I_dot.animate.move_to(new_I_pos2),
@@ -439,75 +494,37 @@ class IterativeGradientAscentScene(ThreeDScene):
             FadeOut(I_label_1),
             FadeOut(orange_arrow1),
             FadeOut(VGroup(*new_sample_dots)),
+            FadeOut(gp_surface_1),
+            FadeOut(gp_axes.x_axis),
+            FadeOut(gp_axes.y_axis),
+            FadeOut(gp_axes.z_axis),
+            FadeOut(gp_x1_label),
+            FadeOut(gp_x2_label),
+            FadeOut(gap_label),
             run_time=1.3,
         )
         self.play(FadeIn(I_label_2), run_time=0.4)
-        self.play(
-            LaggedStart(
-                *[FadeIn(d, scale=0.5) for d in new_sample_dots2],
-                lag_ratio=0.05,
-            ),
-            run_time=0.9,
-        )
         self.wait(0.3)
 
         # ==================================================================
-        # Step 7 (35-40s): third iteration at I_2 (compressed)
+        # Step 7: stop at I_2 and reveal the I_0 -> I_1 -> I_2 trajectory.
         # ==================================================================
-        blue_arrow2 = make_arrow(spec2["I"], spec2["blue"], Opt_BLUE)
-        green_arrow2 = make_arrow(spec2["I"], spec2["green"], HEURISTIC_GREEN)
-        orange_arrow2 = make_arrow(spec2["I"], spec2["orange"], GAP_ORANGE)
-        self.add_fixed_in_frame_mobjects(blue_arrow2, green_arrow2, orange_arrow2)
-        self.remove(blue_arrow2, green_arrow2, orange_arrow2)
-
-        # All three arrows flash together
-        self.play(
-            GrowArrow(blue_arrow2),
-            GrowArrow(green_arrow2),
-            GrowArrow(orange_arrow2),
-            run_time=0.9,
-        )
-        self.wait(0.5)
-
-        # Step I_2 -> I_3
-        new_I_pos3 = plane.c2p(*I_final)
-        delta_screen3 = new_I_pos3 - plane.c2p(*spec2["I"])
-        I_label_3 = MathTex("I_3", color=I_COLOR, font_size=34).move_to(
-            new_I_pos3 + UL * 0.22,
-        )
-        self.add_fixed_in_frame_mobjects(I_label_3)
-        self.remove(I_label_3)
-
-        self.play(
-            I_dot.animate.move_to(new_I_pos3),
-            delta_box.animate.shift(delta_screen3),
-            FadeOut(I_label_2),
-            FadeOut(blue_arrow2),
-            FadeOut(green_arrow2),
-            FadeOut(orange_arrow2),
-            FadeOut(VGroup(*new_sample_dots2)),
-            run_time=1.2,
-        )
-        self.play(FadeIn(I_label_3), run_time=0.4)
-
-        # Polish: dotted trajectory trail through I_0..I_3
         trail_pts = [
             plane.c2p(*spec0["I"]),
             plane.c2p(*spec1["I"]),
             plane.c2p(*spec2["I"]),
-            plane.c2p(*I_final),
         ]
         trail = VGroup(*[
             DashedLine(
                 trail_pts[i], trail_pts[i + 1],
                 color=GRAY, stroke_width=1.5, dash_length=0.08,
-            ).set_opacity(0.5)
+            ).set_opacity(0.55)
             for i in range(len(trail_pts) - 1)
         ])
         self.add_fixed_in_frame_mobjects(trail)
         self.remove(trail)
-        self.play(Create(trail), run_time=0.9)
-        self.wait(0.4)
+        self.play(Create(trail), run_time=1.2)
+        self.wait(0.6)
 
         # ==================================================================
         # Step 8: hold final state, then fade to white

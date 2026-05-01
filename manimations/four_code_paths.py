@@ -163,7 +163,7 @@ class FourCodePathsScene(ThreeDScene):
 
         # Step 0.4: title fades in
         title = MathTex(
-            r"\text{Two demands: } d_1 \text{ and } d_2",
+            r"\text{Two demands: } I_1 \text{ and } I_2",
             color=PURPLE_ACCENT, font_size=34,
         ).to_edge(UP, buff=0.35).shift(RIGHT * 1.5)
         self.add_fixed_in_frame_mobjects(title)
@@ -176,7 +176,7 @@ class FourCodePathsScene(ThreeDScene):
         # ==============================================================
         # Step 1.1: axes appear (code stays small in corner).
         # MUST be ThreeDAxes -- 2D Axes silently drops the z component when
-        # we later call axes.c2p(d_1, d_2, gap), which would render every
+        # we later call axes.c2p(I_1, I_2, gap), which would render every
         # 3D surface flat at z=0.
         axes = ThreeDAxes(
             x_range=[0, DOMAIN_MAX, 0.5],
@@ -196,10 +196,10 @@ class FourCodePathsScene(ThreeDScene):
         # Hide the z-axis (we never want to see it -- the prisms convey z).
         axes.z_axis.set_opacity(0)
 
-        d1_label = MathTex("d_1", color=BLACK, font_size=32).next_to(
+        d1_label = MathTex("I_1", color=BLACK, font_size=32).next_to(
             axes.x_axis.get_end(), DR, buff=0.1,
         )
-        d2_label = MathTex("d_2", color=BLACK, font_size=32).next_to(
+        d2_label = MathTex("I_2", color=BLACK, font_size=32).next_to(
             axes.y_axis.get_end(), UL, buff=0.1,
         )
         # Mark P on each axis
@@ -250,11 +250,11 @@ class FourCodePathsScene(ThreeDScene):
              (P * 0.5, P * 0.5)),
             (GREEN_REGION,
              [(P, 0), (DOMAIN_MAX, 0), (DOMAIN_MAX, P), (P, P)],
-             r"d_2\ \text{pinned}",
+             r"I_2\ \text{pinned}",
              (P * 1.5, P * 0.5)),
             (ORANGE_REGION,
              [(0, P), (P, P), (P, DOMAIN_MAX), (0, DOMAIN_MAX)],
-             r"d_1\ \text{pinned}",
+             r"I_1\ \text{pinned}",
              (P * 0.5, P * 1.5)),
             (RED_REGION,
              [(P, P), (DOMAIN_MAX, P),
@@ -319,9 +319,9 @@ class FourCodePathsScene(ThreeDScene):
         # smooth) + explicit vertical cliff walls between them (so the
         # non-differentiability is visible).
         #
-        #     BLUE   (both pinned)        z = d_1 + d_2   (steepest -- worst)
-        #     GREEN  (d_2 pinned)         z = d_2
-        #     ORANGE (d_1 pinned)         z = d_1
+        #     BLUE   (both pinned)        z = I_1 + I_2   (steepest -- worst)
+        #     GREEN  (I_2 pinned)         z = I_2
+        #     ORANGE (I_1 pinned)         z = I_1
         #     RED    (both optimized)     z = 0           (flat floor)
         #
         # Raw gap functions exactly as specified. With P=2, max blue corner
@@ -340,7 +340,7 @@ class FourCodePathsScene(ThreeDScene):
 
         eps = 0.005  # tiny buffer so adjacent prisms appear to meet exactly
         # at the boundaries -- cliffs are then the height jump between
-        # coincident walls at d_1=P and d_2=P.
+        # coincident walls at I_1=P and I_2=P.
 
         def make_top(gap_fn, u_lo, u_hi, v_lo, v_hi, color):
             """Slanted top face. Single fill color, no checkerboard, no
@@ -401,13 +401,13 @@ class FourCodePathsScene(ThreeDScene):
         # Blue prism walls (rectangle in floor: [eps, P-eps] x [eps, P-eps])
         walls.append(make_wall((eps,     eps),     (P - eps, eps),
                                gap_blue(eps, eps), gap_blue(P - eps, eps),
-                               BLUE_TONAL))   # front (low d_2)
+                               BLUE_TONAL))   # front (low I_2)
         walls.append(make_wall((P - eps, eps),     (P - eps, P - eps),
                                gap_blue(P - eps, eps), gap_blue(P - eps, P - eps),
-                               BLUE_TONAL))   # right (high d_1) -- faces green
+                               BLUE_TONAL))   # right (high I_1) -- faces green
         walls.append(make_wall((P - eps, P - eps), (eps,     P - eps),
                                gap_blue(P - eps, P - eps), gap_blue(eps, P - eps),
-                               BLUE_TONAL))   # back (high d_2) -- faces orange
+                               BLUE_TONAL))   # back (high I_2) -- faces orange
         walls.append(make_wall((eps,     P - eps), (eps,     eps),
                                gap_blue(eps, P - eps), gap_blue(eps, eps),
                                BLUE_TONAL))   # left
@@ -455,7 +455,7 @@ class FourCodePathsScene(ThreeDScene):
             run_time=0.6,
         )
 
-        # Step 2.3: cliff view -- look down d_1=P boundary
+        # Step 2.3: cliff view -- look down I_1=P boundary
         self.move_camera(phi=70 * DEGREES, theta=-90 * DEGREES, run_time=3)
         self.wait(2)
 
@@ -482,7 +482,7 @@ class FourCodePathsScene(ThreeDScene):
 
         # Step 3.2: hardcoded random seed positions. NO seeds in BLUE so
         # the random sampler misses the worst-case region (where the gap
-        # = d_1 + d_2 reaches 2P at the corner (P, P)).
+        # = I_1 + I_2 reaches 2P at the corner (P, P)).
         random_seeds = [
             (3.2, 0.6, "green"),
             (2.6, 1.4, "green"),
@@ -510,8 +510,8 @@ class FourCodePathsScene(ThreeDScene):
         self.wait(0.4)
 
         # Step 3.3: each seed climbs to the MAX-z point of its hyperplane.
-        #   green  z = d_2          -> max at d_2 = P (top edge of green)
-        #   orange z = d_1          -> max at d_1 = P (right edge of orange)
+        #   green  z = I_2          -> max at I_2 = P (top edge of green)
+        #   orange z = I_1          -> max at I_1 = P (right edge of orange)
         #   red    z = 0            -> flat (no climb)
         # (No blue seeds since random sampling missed the worst-case region.)
         region_to_peak = {
@@ -625,9 +625,9 @@ class FourCodePathsScene(ThreeDScene):
         )
 
         # Step 5.2: KLEE seeds climb to the MAX-z point of each hyperplane.
-        #   blue   z = d_1 + d_2  -> max at corner (P, P), z = 2P
-        #   green  z = d_2        -> max at d_2 = P,         z = P
-        #   orange z = d_1        -> max at d_1 = P,         z = P
+        #   blue   z = I_1 + I_2  -> max at corner (P, P), z = 2P
+        #   green  z = I_2        -> max at I_2 = P,         z = P
+        #   orange z = I_1        -> max at I_1 = P,         z = P
         #   red    z = 0          -> flat
         peaks = [
             (P,       P,       gap_blue(P, P),         BLUE_REGION),   # 2P
@@ -653,7 +653,7 @@ class FourCodePathsScene(ThreeDScene):
 
         # Step 5.3: peak labels show the GAP FUNCTION for each region,
         # so the viewer reads the non-differentiable structure directly.
-        peak_values = [r"d_1 + d_2", r"d_2", r"d_1", r"0"]
+        peak_values = [r"I_1 + I_2", r"I_2", r"I_1", r"0"]
         peak_labels = []
         for (px, py, pz, color), val in zip(peaks, peak_values):
             label = MathTex(val, color=BLACK, font_size=28)
@@ -662,7 +662,7 @@ class FourCodePathsScene(ThreeDScene):
             self.remove(label)
             # peak_labels.append(label)
 
-        # The "worst case" is now BLUE (d_1 + d_2 is the steepest function),
+        # The "worst case" is now BLUE (I_1 + I_2 is the steepest function),
         # so the purple ring + callout move from orange to blue.
         orange_idx = 0
         opx, opy, opz, _ = peaks[orange_idx]
@@ -770,7 +770,7 @@ class FourCodePathsScene(ThreeDScene):
 #   on orange is the dramatic "tall" peak; if it clips the top of the frame
 #   at your camera angle, drop to 2.0 (and update the "2.5" peak label too).
 # - small_code_pos = (-5.3, 2.6, 0). If the corner code label collides with
-#   the title or the d_2 axis label at your aspect ratio, adjust this single
+#   the title or the I_2 axis label at your aspect ratio, adjust this single
 #   constant.
 # - The `code_obj` parameter is `code=` (Manim CE 0.18). On 0.19+, switch to
 #   `code_string=`.
