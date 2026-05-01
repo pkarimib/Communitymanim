@@ -75,27 +75,26 @@ class FourCodePathsScene(ThreeDScene):
         # ==============================================================
         # Step 0.1: full code in center
         code_text = (
-            "void demand_pinning(Demand d, double P) {\n"
-            "    for (each demand d_i) {\n"
-            "        if (d_i <= P) {\n"
-            "            pin_to_shortest_path(d_i);\n"
-            "        } else {\n"
-            "            route_optimally(d_i);\n"
-            "        }\n"
-            "    }\n"
-            "}"
+            "for demand in demands:\n"
+            "    if demand <= P:\n"
+            "        allocate_shortest_path(demand)\n"
+            "    else:\n"
+            "        optimization_set.add(demand)\n"
+            "\n"
+            "solve_optimization(optimization_set)"
         )
         # Manim CE 0.19 API: code_string / formatter_style / paragraph_config.
         # If you're on 0.18, swap to code=, style=, font=, font_size=,
         # insert_line_no=, background_stroke_color=, margin= as kwargs.
         code_obj = Code(
             code_string=code_text,
-            language="c",
-            formatter_style="default",
+            language="python",
+            formatter_style="bw",
             add_line_numbers=False,
             background="rectangle",
             background_config={
-                "color": "#FFFFFF",
+                "fill_color": "#FFFFFF",
+                "fill_opacity": 1.0,
                 "stroke_color": BLACK_ACCENT,
                 "stroke_width": 1,
                 "buff": 0.25,
@@ -105,15 +104,28 @@ class FourCodePathsScene(ThreeDScene):
                 "font_size": 18,
             },
         )
+        # Force the background to solid white and every code glyph to BLACK,
+        # overriding whatever the Pygments style applied.
+        if hasattr(code_obj, "background"):
+            code_obj.background.set_fill("#FFFFFF", opacity=1.0)
+        if hasattr(code_obj, "code"):
+            code_obj.code.set_color(BLACK)
+        else:
+            # Older Manim Code variants store the rendered text differently
+            for sub in code_obj.submobjects:
+                if hasattr(sub, "set_color") and sub is not getattr(
+                    code_obj, "background", None
+                ):
+                    sub.set_color(BLACK)
         code_obj.move_to(ORIGIN)
         self.add_fixed_in_frame_mobjects(code_obj)
         self.remove(code_obj)
 
-        self.play(FadeIn(code_obj), run_time=1.2)
-        self.wait(0.3)
+        self.play(FadeIn(code_obj), run_time=2.0)
+        self.wait(1.2)
 
-        # Step 0.2: pulse a rectangle outline around the if-line
-        # (the if line sits ~third line, slightly above the code center)
+        # Step 0.2: pulse a rectangle outline around the if-line and pop up
+        # an explanatory caption to the LEFT of the code while the pulse holds.
         if_pulse_box = Rectangle(
             width=code_obj.width * 0.78,
             height=0.36,
@@ -122,19 +134,31 @@ class FourCodePathsScene(ThreeDScene):
             fill_opacity=0,
         )
         if_pulse_box.move_to(code_obj.get_center() + UP * 0.55)
-        self.add_fixed_in_frame_mobjects(if_pulse_box)
-        self.remove(if_pulse_box)
-        self.play(Create(if_pulse_box), run_time=0.5)
-        self.play(if_pulse_box.animate.scale(1.08),
-                  rate_func=there_and_back, run_time=0.6)
-        self.play(FadeOut(if_pulse_box), run_time=0.4)
+
+        if_explainer = MathTex(
+            r"\mathrm{This\;branch\;splits\;input\;space\;into\;different\;code\;paths.}",
+            font_size=32, color=PURPLE_ACCENT,
+        ).next_to(code_obj, DOWN, buff=0.5)
+
+        self.add_fixed_in_frame_mobjects(if_pulse_box, if_explainer)
+        self.remove(if_pulse_box, if_explainer)
+
+        self.play(Create(if_pulse_box), run_time=0.8)
+        self.play(FadeIn(if_explainer, shift=UP * 0.3), run_time=0.8)
+        self.play(
+            if_pulse_box.animate.scale(1.08),
+            rate_func=there_and_back,
+            run_time=1.0,
+        )
+        self.wait(2.0)
+        self.play(FadeOut(if_pulse_box), FadeOut(if_explainer), run_time=0.6)
 
         # Step 0.3: shrink + push code into the far top-left corner so the
         # Gap (z) axis doesn't pass behind it when the camera tilts.
         small_code_pos = np.array([-5.7, 3.05, 0])
         self.play(
             code_obj.animate.scale(0.5).move_to(small_code_pos),
-            run_time=1.4,
+            run_time=2.0,
         )
 
         # Step 0.4: title fades in
@@ -235,7 +259,7 @@ class FourCodePathsScene(ThreeDScene):
             (RED_REGION,
              [(P, P), (DOMAIN_MAX, P),
               (DOMAIN_MAX, DOMAIN_MAX), (P, DOMAIN_MAX)],
-             r"\text{Both optimal}",
+             r"\text{None pinned}",
              (P * 1.5, P * 1.5)),
         ]
         regions = []
