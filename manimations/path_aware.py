@@ -69,9 +69,8 @@ class PathAwareGradientScene(Scene):
             Create(plane),
             FadeIn(x_ax_label),
             FadeIn(y_ax_label),
-            run_time=1.6,
+            run_time=1.2,
         )
-        self.wait(0.3)
 
         # ==================================================================
         # Step 2 (3-7s): equivalence class regions -- four quadrants split at
@@ -98,33 +97,23 @@ class PathAwareGradientScene(Scene):
                           color=BOUNDARY_COLOR, stroke_width=1.8)
         boundaries = VGroup(boundary_v, boundary_h)
 
-        class_label = MathTex(
-            r"\text{Class} = \text{code-path}(I)",
-            color=PURPLE_ACCENT, font_size=26,
-        ).to_edge(DOWN, buff=0.15)
-
-        self.play(FadeIn(regions), run_time=0.8)
         self.play(
+            FadeIn(regions),
             Create(boundaries),
-            FadeIn(class_label),
-            run_time=1.0,
+            run_time=0.9,
         )
-        self.wait(0.5)
 
         # ==================================================================
         # Step 3: fade other classes; focus on the blue quadrant.
-        # No Gap labels -- the colors alone carry the focus, so this beat
-        # is shorter than before.
         # ==================================================================
         self.play(
             green_region.animate.set_fill(opacity=0.15),
             orange_region.animate.set_fill(opacity=0.15),
             red_region.animate.set_fill(opacity=0.15),
             blue_region.animate.set_fill(opacity=0.55),
-            FadeOut(class_label),
-            run_time=1.0,
+            run_time=0.7,
         )
-        self.wait(0.5)
+        self.wait(0.2)
 
         # ==================================================================
         # Step 4 (10-14s): point I lives in BLUE; the Delta-box straddles
@@ -204,13 +193,7 @@ class PathAwareGradientScene(Scene):
             LaggedStart(*shake_then_fade, lag_ratio=0.1),
             run_time=1.4,
         )
-
-        filter_caption = MathTex(
-            r"Class(I) = \{\, x \in \text{box} \;\mid\; \text{code-path}(x) = \text{code-path}(I)\,\}",
-            color=PURPLE_ACCENT, font_size=24,
-        ).to_edge(DOWN, buff=0.35)
-        self.play(FadeIn(filter_caption), run_time=0.8)
-        self.wait(0.8)
+        self.wait(0.5)
 
         # ==================================================================
         # Step 6 (18-23s): proposed gradient step -- lands outside the class
@@ -330,7 +313,6 @@ class PathAwareGradientScene(Scene):
             FadeOut(grad_arrow),
             FadeOut(grad_arrow_label),
             FadeOut(VGroup(*other_in_dots)),
-            FadeOut(filter_caption),
             run_time=2.0,
         )
         self.wait(0.8)
@@ -338,9 +320,9 @@ class PathAwareGradientScene(Scene):
         # ==================================================================
         # Step 9 (32-38s): punchline
         # ==================================================================
-        punchline_text = Text(
-            "Path-aware gradient ascent: stay within the equivalence class",
-            font=TEXT_FONT, font_size=26, color=WHITE,
+        punchline_text = MathTex(
+            r"\mathrm{Project\;back\;to\;stay\;in\;the\;same\;code\;path.}",
+            font_size=32, color=WHITE,
         )
         punch_box = SurroundingRectangle(
             punchline_text,
