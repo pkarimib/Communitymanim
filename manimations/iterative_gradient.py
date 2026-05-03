@@ -308,14 +308,17 @@ class IterativeGradientAscentScene(ThreeDScene):
             thickness=0.025, height=0.16, base_radius=0.06,
         )
 
-        self.play(GrowArrow(blue_arrow), FadeIn(blue_label), run_time=1.2)
+        # Heuristic gradient first -- on the right plane and on the GP
+        # surface simultaneously -- then the Opt gradient.
         self.play(
             GrowArrow(green_arrow),
             FadeIn(green_label),
             FadeIn(surf_grad_arrow, shift=0.1 * OUT),
             run_time=1.2,
         )
-        self.wait(0.9)
+        self.wait(0.4)
+        self.play(GrowArrow(blue_arrow), FadeIn(blue_label), run_time=1.2)
+        self.wait(0.6)
 
         # ==================================================================
         # Step 4 (18-22s): combine into Gap arrow (orange)
@@ -461,13 +464,16 @@ class IterativeGradientAscentScene(ThreeDScene):
             thickness=0.025, height=0.16, base_radius=0.06,
         )
 
+        # Heuristic first (right plane + GP surface), then Opt, then combine
+        # into Gap.
         self.play(
-            GrowArrow(blue_arrow1),
             GrowArrow(green_arrow1),
             FadeIn(surf_grad_arrow_1, shift=0.1 * OUT),
             run_time=1.0,
         )
-        self.wait(0.4)
+        self.wait(0.3)
+        self.play(GrowArrow(blue_arrow1), run_time=0.9)
+        self.wait(0.3)
         self.play(
             FadeOut(blue_arrow1), FadeOut(green_arrow1),
             FadeOut(surf_grad_arrow_1),
