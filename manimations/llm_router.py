@@ -215,9 +215,8 @@ class LLMRouterScene(Scene):
             stroke_color=ROUTER_STROKE, stroke_width=2.2,
             fill_color=ROUTER_FILL, fill_opacity=0.85,
         ).move_to(router_center)
-        router_label = Text(
-            "Request Router", font=TEXT_FONT, weight=BOLD,
-            color=BLACK, font_size=22,
+        router_label = MathTex(
+            r"\text{\textbf{Request Router}}", color=BLACK, font_size=30,
         ).move_to(router.get_center())
 
         router_left_x = router.get_left()[0]      # -3.0
@@ -273,9 +272,8 @@ class LLMRouterScene(Scene):
                 width=proc_w - 0.10, height=gpu_bar_h - 0.16,
                 stroke_width=0, fill_color=GPU_PROC_PULSE, fill_opacity=0.0,
             ).move_to([proc_zone_center_x, y, 0])
-            name_label = Text(
-                f"GPU {i}", font=TEXT_FONT, weight=BOLD,
-                color=LABEL_COLOR, font_size=15,
+            name_label = MathTex(
+                r"\text{\textbf{GPU " + str(i) + "}}", color=BLACK, font_size=18,
             ).next_to(outer, LEFT, buff=0.22)
 
             gpus.append({
@@ -296,11 +294,11 @@ class LLMRouterScene(Scene):
         ]
 
         top = gpus[0]
-        queue_col_label = Text(
-            "Queue", font=TEXT_FONT, color=BLACK, font_size=12,
+        queue_col_label = MathTex(
+            r"\text{\textbf{Queue}}", color=BLACK, font_size=22,
         ).move_to([queue_zone_center_x, top['y'] + gpu_bar_h / 2 + 0.20, 0])
-        proc_col_label = Text(
-            "Processing", font=TEXT_FONT, color=BLACK, font_size=12,
+        proc_col_label = MathTex(
+            r"\text{\textbf{Processing}}", color=BLACK, font_size=22,
         ).move_to([proc_zone_center_x, top['y'] + gpu_bar_h / 2 + 0.20, 0])
 
         # Compose static scene
