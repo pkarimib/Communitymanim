@@ -298,7 +298,7 @@ class LLMRouterScene(Scene):
             r"\text{\textbf{Queue}}", color=BLACK, font_size=22,
         ).move_to([queue_zone_center_x, top['y'] + gpu_bar_h / 2 + 0.20, 0])
         proc_col_label = MathTex(
-            r"\text{\textbf{Processing}}", color=BLACK, font_size=22,
+            r"\text{\textbf{Decoding}}", color=BLACK, font_size=22,
         ).move_to([proc_zone_center_x, top['y'] + gpu_bar_h / 2 + 0.20, 0])
 
         # Compose static scene
