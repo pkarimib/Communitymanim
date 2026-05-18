@@ -583,7 +583,7 @@ class GliaDiscovery(Scene):
             color=MEM_RED, font_size=28,
         ).to_edge(DOWN, buff=0.6)
         self.play(FadeIn(stat, run_time=0.5))
-        self.wait(1.2)
+        self.wait(5)
 
         # Clean up Act 1: fade out the stat/title and drain the residual
         # memory on GPUs 0 / 1 (left over from the post-restart drops).
