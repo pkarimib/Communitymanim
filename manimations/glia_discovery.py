@@ -91,6 +91,12 @@ REQ_OPACITY = 0.95
 HATCH_OPACITY = 0.55
 HRA_THRESHOLD = 0.72
 
+# Bar width = proc_time * DECODE_RATE. Bars grow at a constant rate;
+# longer decodes produce visibly longer bars. The GPU bar is open on
+# the right (see make_open_gpu_bar) so bars that need more than the
+# original proc-zone width can extend past it.
+DECODE_RATE = 1.55
+
 
 # ---------------------------------------------------------------------- helpers
 def mem_color_for(level):
@@ -120,6 +126,32 @@ def make_request(req_width, fill_c, stroke_c, opacity=REQ_OPACITY):
         stroke_color=stroke_c, stroke_width=1.8,
         fill_color=fill_c, fill_opacity=opacity,
     )
+
+
+def make_open_gpu_bar(width, height, center, stroke_color, stroke_width=1.6):
+    """A U-shape (top, bottom, left only) -- the right side is open so
+    a decode bar can grow past the original right edge. Visualizes that
+    decode length is unbounded at admission time."""
+    cx, cy = center[0], center[1]
+    left = cx - width / 2
+    right = cx + width / 2
+    top = cy + height / 2
+    bottom = cy - height / 2
+    return VGroup(
+        Line([left, top, 0], [right, top, 0],
+             color=stroke_color, stroke_width=stroke_width),
+        Line([left, bottom, 0], [right, bottom, 0],
+             color=stroke_color, stroke_width=stroke_width),
+        Line([left, top, 0], [left, bottom, 0],
+             color=stroke_color, stroke_width=stroke_width),
+    )
+
+
+def decode_width(proc_time, min_req_width=0.0):
+    """Per-chip decode bar width. Bar must be wider than the queue chip
+    (so the grow_into_proc is a stretch, not a shrink), and is capped
+    at 2.85 so it never extends off the right edge of the frame."""
+    return max(min_req_width + 0.05, min(2.85, proc_time * DECODE_RATE))
 
 
 def slide_to(mob, dest_xyz, run_time, rate_func=smooth, opacity=REQ_OPACITY):
@@ -277,18 +309,23 @@ class GliaDiscovery(Scene):
 
         self.gpus = []
         for i, y in enumerate(GPU_YS):
-            outer = RoundedRectangle(
-                width=GPU_BAR_W, height=GPU_BAR_H, corner_radius=0.12,
+            # Open-right U-shape (no right wall). Decoding bars can grow
+            # past the original right edge -- this conveys that decode
+            # length isn't bounded at admission time.
+            outer = make_open_gpu_bar(
+                GPU_BAR_W, GPU_BAR_H, [GPU_CENTER_X, y, 0],
                 stroke_color=GPU_STROKE, stroke_width=1.6,
-                fill_color=BG_COLOR, fill_opacity=1.0,
-            ).move_to([GPU_CENTER_X, y, 0])
+            )
             queue_zone = Rectangle(
                 width=QUEUE_W - 0.04, height=GPU_BAR_H - 0.08,
                 stroke_width=0, fill_color=GPU_QUEUE_FILL, fill_opacity=1.0,
             ).move_to([QUEUE_CENTER_X, y, 0])
+            # Proc zone background is now WHITE (= page bg) since the
+            # right side is open. The dashed divider still marks where
+            # queue ends and decoding begins.
             proc_zone = Rectangle(
                 width=PROC_W - 0.04, height=GPU_BAR_H - 0.08,
-                stroke_width=0, fill_color=GPU_PROC_FILL, fill_opacity=1.0,
+                stroke_width=0, fill_color=BG_COLOR, fill_opacity=1.0,
             ).move_to([PROC_CENTER_X, y, 0])
             divider = DashedLine(
                 start=[PROC_LEFT_X, y - 0.35, 0],
@@ -377,7 +414,7 @@ class GliaDiscovery(Scene):
     # ========================================================================
     def act_1(self):
         title = MathTex(
-            r"\text{\textbf{Naive routing --- least-loaded Queue (LLQ)}}",
+            r"\text{\textbf{Least-Loaded Queue (LLQ)}}",
             color=ROUTER_STROKE, font_size=30,
         ).to_corner(UL, buff=0.4)
         self.play(FadeIn(title, run_time=0.5))
@@ -441,8 +478,8 @@ class GliaDiscovery(Scene):
                 # for why eviction happens: decode length is unknown at
                 # admission time, so memory creeps up unpredictably.
                 AnimationGroup(
-                    grow_into_proc(chip, gy, PROC_W * 0.94, proc_t,
-                                   slot=slot, n_slots=n_slots),
+                    grow_into_proc(chip, gy, decode_width(proc_t, w),
+                                   proc_t, slot=slot, n_slots=n_slots),
                     two_phase_mem_rise(mem_tracker, new_level, proc_t),
                     tracker_set(hatch_op, HATCH_OPACITY, proc_t,
                                 rate_func=linear),
@@ -682,7 +719,9 @@ class GliaDiscovery(Scene):
         # slide. No internal pauses -- chip flows continuously through
         # the queue so the target GPU is filled as soon as possible.
         proc_anims = [
-            grow_into_proc(victim, target_gy, PROC_W * 0.94, restart_proc_t),
+            grow_into_proc(victim, target_gy,
+                           decode_width(restart_proc_t),
+                           restart_proc_t),
             tracker_set(target_mem, new_peak, restart_proc_t,
                         rate_func=linear),
         ]
@@ -757,7 +796,7 @@ class GliaDiscovery(Scene):
     # ========================================================================
     def act_2(self):
         title = MathTex(
-            r"\text{\textbf{HRA --- check headroom before admitting}}",
+            r"\text{\textbf{Head-Room Admission (HRA) --- check headroom before admitting}}",
             color=ROUTER_STROKE, font_size=30,
         ).to_corner(UL, buff=0.4)
         # Reveal headroom lines on every GPU
@@ -815,7 +854,7 @@ class GliaDiscovery(Scene):
                 slide_to(chip, ROUTER_CENTER, 0.28),
                 slide_to(chip, [QUEUE_CENTER_X + 0.3, gy, 0], 0.30),
                 AnimationGroup(
-                    grow_into_proc(chip, gy, PROC_W * 0.94, pt),
+                    grow_into_proc(chip, gy, decode_width(pt, w), pt),
                     two_phase_mem_rise(mem_tracker, peak, pt),
                     tracker_set(hatch_op, HATCH_OPACITY, pt, rate_func=linear),
                 ),
@@ -961,7 +1000,8 @@ class GliaDiscovery(Scene):
                 slide_to(chip, ROUTER_CENTER, 0.28),
                 slide_to(chip, [QUEUE_CENTER_X + 0.3, gy, 0], 0.30),
                 AnimationGroup(
-                    grow_into_proc(chip, gy, PROC_W * 0.94, pt),
+                    grow_into_proc(chip, gy,
+                                   decode_width(pt, chip.get_width()), pt),
                     two_phase_mem_rise(mem_tracker, peak_level, pt),
                     tracker_set(hatch_op, HATCH_OPACITY, pt, rate_func=linear),
                 ),
@@ -993,7 +1033,7 @@ class GliaDiscovery(Scene):
         # Final two-line stat (Improvement 3).
         # =================================================================
         stat_top = MathTex(
-            r"\text{\textbf{0 restarts --- 42\% faster (vs. LLQ)}}",
+            r"\text{\textbf{Number of restarts reduced --- 42\% faster (vs. LLQ)}}",
             color=MEM_GREEN, font_size=28,
         )
         stat_bottom = MathTex(

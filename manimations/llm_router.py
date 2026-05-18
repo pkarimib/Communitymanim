@@ -70,6 +70,14 @@ GPU_ASSIGNMENT = [0, 0, 0, 0, 1, 1, 1, 2, 2, 3, 3]
 # do different amounts of work.
 PROC_TIMES = [2.4, 3.2, 1.8, 2.6, 2.0, 3.4, 1.6, 2.8, 2.2, 3.0, 1.4]
 
+# Each chip's decode bar width = proc_time * DECODE_RATE. Bars grow at a
+# constant rate (one "decode rate" per GPU). Some long decodes overshoot
+# the original proc-zone width -- which the open-right GPU bar (see
+# make_open_gpu_bar) is specifically designed to accommodate. Picked so
+# the longest decodes extend slightly past the old proc_w (~2.64) while
+# staying within the visible frame.
+DECODE_RATE = 0.85
+
 # Request appearance: each request has its own width (suggesting prompt
 # length). The same width is used for both the pre-router chip and the
 # GPU-queue chip so the size stays constant as it passes through the
@@ -77,6 +85,25 @@ PROC_TIMES = [2.4, 3.2, 1.8, 2.6, 2.0, 3.4, 1.6, 2.8, 2.2, 3.0, 1.4]
 # without adjacent chips touching.
 REQ_HEIGHT = 0.42
 REQ_WIDTHS = [0.40, 0.55, 0.35, 0.50, 0.45, 0.55, 0.40, 0.52, 0.55, 0.45, 0.38]
+
+
+def make_open_gpu_bar(width, height, center, stroke_color, stroke_width=1.6):
+    """A U-shape (top, bottom, left only) -- the right side is open so
+    a decode bar can grow past the original right edge. Visualizes that
+    decode length is unbounded at admission time."""
+    cx, cy = center[0], center[1]
+    left = cx - width / 2
+    right = cx + width / 2
+    top = cy + height / 2
+    bottom = cy - height / 2
+    return VGroup(
+        Line([left, top, 0], [right, top, 0],
+             color=stroke_color, stroke_width=stroke_width),
+        Line([left, bottom, 0], [right, bottom, 0],
+             color=stroke_color, stroke_width=stroke_width),
+        Line([left, top, 0], [left, bottom, 0],
+             color=stroke_color, stroke_width=stroke_width),
+    )
 
 
 def simulate_schedule():
@@ -248,18 +275,23 @@ class LLMRouterScene(Scene):
 
         gpus = []
         for i, y in enumerate(gpu_ys):
-            outer = RoundedRectangle(
-                width=gpu_bar_w, height=gpu_bar_h, corner_radius=0.12,
+            # Open-right U-shape (no right wall). Decoding bars can grow
+            # past the original right edge -- this conveys that decode
+            # length isn't bounded at admission time.
+            outer = make_open_gpu_bar(
+                gpu_bar_w, gpu_bar_h, [gpu_center_x, y, 0],
                 stroke_color=GPU_STROKE, stroke_width=1.6,
-                fill_color=BG_COLOR, fill_opacity=1.0,
-            ).move_to([gpu_center_x, y, 0])
+            )
             queue_zone = Rectangle(
                 width=queue_w - 0.04, height=gpu_bar_h - 0.08,
                 stroke_width=0, fill_color=GPU_QUEUE_FILL, fill_opacity=1.0,
             ).move_to([queue_zone_center_x, y, 0])
+            # Proc zone background is now WHITE (= page bg) since the
+            # right side of the GPU bar is open. The dashed divider
+            # still marks where queue ends and decoding begins.
             proc_zone = Rectangle(
                 width=proc_w - 0.04, height=gpu_bar_h - 0.08,
-                stroke_width=0, fill_color=GPU_PROC_FILL, fill_opacity=1.0,
+                stroke_width=0, fill_color=BG_COLOR, fill_opacity=1.0,
             ).move_to([proc_zone_center_x, y, 0])
             divider = DashedLine(
                 start=[proc_left_x, y - 0.38, 0],
@@ -544,10 +576,14 @@ class LLMRouterScene(Scene):
             post_ops.append(slide(req_post, [proc_entry_center_x, gy, 0], T_TO_PROC))
             t_cursor += T_TO_PROC
 
-            # Expand-fill: stretch the request horizontally to fill the
-            # proc zone. Anchored at the left edge so it reads as a
-            # progress bar growing from 0 -> full width.
-            target_width = proc_w * 0.94
+            # Expand-fill: stretch the request horizontally as a decode
+            # bar growing at a constant rate (DECODE_RATE). Bar width is
+            # proportional to proc_time, so longer decodes produce
+            # visibly longer bars -- and the ones that exceed the
+            # original proc-zone width naturally extend past the
+            # (now-open) right edge of the GPU bar.
+            target_width = max(ev['req_width'] + 0.05,
+                               ev['proc_time'] * DECODE_RATE)
             proc_target = req_post.copy()
             proc_target.stretch_to_fit_width(target_width)
             proc_target.move_to([proc_left_x + target_width / 2, gy, 0])
